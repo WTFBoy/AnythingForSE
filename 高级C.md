@@ -39,7 +39,7 @@ str_cli返回到客户的main函数时，调用exit终止。
 默认情况下，所有套接字都是阻塞式的。<br>
 <h3>非阻塞式I/O<h3>
 非阻塞式套接字是在通知内核：当所请求的I/O操作非得把本进程投入睡眠才能完成时， 不要把本进程投入睡眠,而是返回一个错误。举个例子，如下图所示，
-  ![img](http://https://github.com/WTFBoy/AnythingForSE/blob/main/1.png).<br>
+  ![img](https://github.com/WTFBoy/AnythingForSE/blob/main/1.png).<br>
   前三次调用时recvfrom没有数据返回，因此内核返回一个EWOULDBLOCK错误。第四次内核已经准备好数据报，因此recvfrom成功返回。
 
 当一个应用进程像这样对一个非阻塞描述符循环调用recvfrom时，我们称之为轮询(polling)。往往大量耗费CPU时间。
