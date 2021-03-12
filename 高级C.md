@@ -1,3 +1,37 @@
+<h1>ps netstat tcpdump</h1>
+
+1. ps
+
+列出系统中运行的进程，包括进程id、命令、CPU使用量、内存使用量。
+
+· ps -a :列出所有运行/激活的进程。
+
+· ps  -aux：显示所有包含其他使用者的行程。
+
+2. netstat
+
+   显示网络状态。
+
+   netstat -a ：显示所有进程网络状态。
+
+   netstat-t : 显示tcp传输协议的连线状态。
+
+   netstat -n: 直接使用IP地址，而不通过服务器。
+
+   netstat -l:显示监控中的进程状态（listening）
+
+3. tcpdump
+
+   倾倒（即显示)网络传输数据。必须root
+
+   -a:将网络和广播地址转换为名称
+
+   
+
+
+
+
+
 # TCP echo正常结束 #
 
 1. 键入EOF，fgets返回一个空指针，str_cli返回。
@@ -36,9 +70,9 @@
 
 <h3>非阻塞式I/O<h3>
 非阻塞式套接字是在通知内核：当所请求的I/O操作非得把本进程投入睡眠才能完成时， 不要把本进程投入睡眠,而是返回一个错误。举个例子，如下图所示，
-
 。<br>
 前三次调用时recvfrom没有数据返回，因此内核返回一个EWOULDBLOCK错误。第四次内核已经准备好数据报，因此recvfrom成功返回。
+
 
 当一个应用进程像这样对一个非阻塞描述符循环调用recvfrom时，我们称之为轮询(polling)。往往大量耗费CPU时间。
 
@@ -91,19 +125,19 @@ traceroute程序使用IPv4的TTL字段或者IPv6的跳限字段以及两种ICMP�
 
 1. socket:<br>
    `#include<sys/socket.h>`<br>
-     `int socket(int family, int type, int protocol);`
+   `int socket(int family, int type, int protocol);`
 
 2. bind:<br>
    `#include<sys/socket.h>`<br>
-     `int bind(int sockfd, const truct sockaddr *myaddr, socklen_t addrlen);`
+   `int bind(int sockfd, const truct sockaddr *myaddr, socklen_t addrlen);`
 
 3. connect:<br>
    `#include<sys/socket.h>`<br>
-     `int connect(int sockfd, const struct sockaddr *myaddr, socklen_t addrlen);`
+   `int connect(int sockfd, const struct sockaddr *myaddr, socklen_t addrlen);`
 
 4. listen:<br>
    ` #include<sys/socket.h>`<br>
-     `int listen(int sockfd, int backlog);`
+   `int listen(int sockfd, int backlog);`
 
 5. accept:<br>
 
@@ -171,7 +205,36 @@ traceroute程序使用IPv4的TTL字段或者IPv6的跳限字段以及两种ICMP�
         int select(int maxfdpl, fd_set *readset, fd_set *writeset, fd_set exceptest, const struct timeval *timeout);
        ```
 
+   11. setsockopt与getsockopt
+
+       ```c
+       #include<sys/socket.h>
+       int getsockopt(int sockfd, int level, int optname, void *optval, socklen_t *optlen);
        
+       int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t *optlen);
+       ```
+
+       12. recvfrom 与sendto
+
+           ```c
+           #include<sys/socket.h>
+           ssize_t recvfrom(int sockfd, void *buff, size_t nbytes, int flags, struct sockaddr *from, socklen_t *addrlen);
+           
+           ssize_t sento(int sockfd, void *buff, size_t nbytes, int flags, struct sockaddr *to, socklen_t addrlen);
+           ```
+
+           13. Raw Socket
+
+               ```c
+               #include<sys/socket.h>
+               int sock(int AF_INET,int Sock_Raw, int protocol);
+               ```
+
+               
+
+
+
+
 
 #TCP与UDP并发服务器设计#
 
@@ -209,4 +272,115 @@ int  main(int argc, char **argv)
 ```
 
 
+
+<h2>Tcp srv cli程序</h2>
+
+```c
+//srv
+#include"unp.h"
+ int main(int agrc, char**argv)
+ {
+     int listenfd, connfd;
+     pid_t =childpid;
+     socklen_t clilen;
+     struct sockaddr_in cliaddr, servaddr;
+     void sig_child(int);
+     
+     listenfd=Socket(AF_INET, SOCK_STREAM, 0);
+     
+     bzero(&servaddr, sizeof(servaddr));
+     servaddr.sin_family=AF_INET;
+     servaddr.sin_addr.s_addr= htonl(INADDR_ANY);
+     servaddr.sin_port=htons(SERV_PORT);
+     
+     Bind(listenfd, (SA*)&servaddr, sizeof(servaddr));
+     
+     Listen(listenfd, LISTENQ);
+     
+     Signal(SIGCHLD,sig_child);
+     
+     for(;;)
+     {
+         clilen=sizeof(cliaddr);
+         if((connfd=accept(listenfd,(SA*)&cliaddr,&clilen))<0)
+         {
+             if(errno==EINTR)
+                 continue;
+             else 
+                 err_sys("accept error\n");
+         }
+         if((childpid=Fork())==0)
+         {
+             Close(listenfd);
+             str_echo(connfd);
+             exit(0);
+         }
+         Colse(connfd);
+	 }
+   
+ }
+```
+
+
+
+```c
+//建立多个连接的cli
+#include"unp.h"
+
+int main(int argc, char**argv)
+{
+    int i, sockfd[5];//5个连接
+    struct sockaddr_in servaddr;
+    
+    if(argc!=2)
+        err_quit("usage:tcpcli<IPaddress\n");
+    for(i=0;i<5;i++)
+    {
+        sockfd[i]=Socket(AF_INET,SOCK_STREAM,0);
+        
+        bzero(&servaddr,sizeof(servaddr));
+        servaddr.sin_family=AF_INET;
+        servaddr.sin_port=htons(SERV_PORT);
+        Inet_pton(AF_INET,argv[1],&servaddr.sin_addr);
+        
+        Connect(sockfd[i],(sa*)servaddr, sizeof(servaddr));
+    }
+    str_cli(stdin, sockfd[0]);
+    exit(0);
+}
+```
+
+```c
+//tcp echo 函数
+#include"unp.h"
+    void str_echo(int sockfd)
+    {
+        ssize_t n;
+        char buf[MAXLINE];
+        again:
+        while((n=read(sockfd,buf,MAXLINE))>0)
+            Writen(sockfd,buf, n);
+        if(n<0&&errno==EINTR)
+            goto again;
+        else if (n<0)
+			err_sys("str_echo:read error");        
+    }
+
+```
+
+```c
+//str_cli
+#include"unp.h"
+void str_cli(FILE *fp, int sockfd){
+    char sendline[MAXLINE],recvline[MAXLINE];
+    while(Fgets(sendline, MAXLINE,fp)!=NULL)
+    {
+        Writen(sockfd,sendline,strlen(sendline));
+        
+        if(Readline(sockfd,recvline,MAXLINE)==0)
+        	err_quit("str_cli:server terminated prematurely");
+        Fputs(recvline, stdout);
+	}
+}
+```
 
